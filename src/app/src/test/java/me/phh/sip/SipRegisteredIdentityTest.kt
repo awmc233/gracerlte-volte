@@ -20,7 +20,8 @@ class SipRegisteredIdentityTest {
         val identity = requireNotNull(SipRegisterSuccessParser.parse(response))
         require(identity.mySip == "sip:+1234@ims.example;user=phone")
         require(identity.myTel == "+1234")
-        require(identity.route == listOf("<sip:pcscf.example;lr>"))
+        // RFC 3608: the Service-Route is used verbatim for originating requests.
+        require(identity.route == listOf("<sip:pcscf.example;lr;transport=udp>"))
     }
 
     @Test

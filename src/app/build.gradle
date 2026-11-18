@@ -1,0 +1,65 @@
+plugins {
+    id 'com.android.application'
+    id 'kotlin-android'
+}
+
+def platformApiJar = providers.gradleProperty('platformApiJar').orNull
+
+android {
+    compileSdk 33
+
+    defaultConfig {
+        applicationId "me.phh.ims"
+        minSdk 29
+        targetSdk 33
+        versionCode 50
+        versionName "1.0"
+
+        }
+    sourceSets {
+        main {
+            jniLibs {
+                srcDirs += "${projectDir}/jniLibs"
+            }
+        }
+    }
+    packagingOptions {
+        jniLibs {
+            useLegacyPackaging = false
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+    kotlinOptions {
+        jvmTarget = '1.8'
+    }
+    namespace 'me.phh.ims'
+}
+
+// Compile Java sources against the full platform jar (hidden APIs such as
+// ImsFeature.CapabilityCallbackProxy are stripped from the SDK stubs).
+tasks.withType(JavaCompile).configureEach {
+    options.compilerArgs += ["-Xbootclasspath/p:${projectDir}/libs/android.jar"]
+}
+
+dependencies {
+    if (platformApiJar != null) {
+        // Host-side regression tests need the same private platform API
+        // surface as the platform_apis Soong build. Supply a full platform
+        // stub/classes jar without replacing the checked-in compatibility jar.
+        compileOnly files(platformApiJar, 'libs/ImsMediaFramework.jar')
+    } else {
+        compileOnly fileTree(dir: 'libs', include: '*.jar')
+    }
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.6.1'
+    testImplementation 'junit:junit:4.13.2'
+}

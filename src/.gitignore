@@ -1,0 +1,25 @@
+*.iml
+.gradle
+/local.properties
+/.idea/caches
+/.idea/libraries
+/.idea/modules.xml
+/.idea/workspace.xml
+/.idea/navEditor.xml
+/.idea/assetWizardSettings.xml
+.DS_Store
+__pycache__/
+/build
+/captures
+.externalNativeBuild
+.cxx
+local.properties
+
+# Samsung HAL binaries and derived disassembly — not redistributable
+RE/binaries/
+RE/dumps/
+app.apk
+keys/*.pk8
+keys/*.pem
+keys/*.jks
+keys/*.keystore

@@ -1,5 +1,21 @@
 # Changelog
 
+## v1.0.1 — 2026-11-18
+
+### 修复
+
+- `src/privapp-permissions-me.phh.ims.xml` 补齐 `CONNECTIVITY_USE_RESTRICTED_NETWORKS`。
+  adb 安装路径此前只写入 2 项白名单，而 APK 会请求该 signature|privileged 权限；在
+  `ro.control_privapp_permissions=enforce` 的 ROM 上会抛
+  `IllegalStateException: Signature|privileged permissions not in privapp-permissions allowlist`，
+  导致 system_server 崩溃、开机循环。卡刷包内原本就是完整白名单，不受影响；本次改动让
+  adb 安装与卡刷的行为一致。
+
+### 新增
+
+- 生成 TWRP 卡刷 / `adb sideload` 通用的安装包
+  `gracerlte-VoLTE-v50-TWRP-sideload.zip`（作为发布资产单独分发，不纳入仓库）。
+
 ## v1.0.0 — 2026-11-18
 
 首个公开版本。将一台"系统层面没有 IMS 栈"的 LineageOS 20 三星 Note FE 改造为可正常使用中国移动 VoLTE：

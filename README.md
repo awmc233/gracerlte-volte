@@ -128,8 +128,10 @@ cp local.properties.example local.properties   # 指向你的 SDK
 - [Daniel-5352/phhims-exynos8890](https://github.com/Daniel-5352/phhims-exynos8890) —— Exynos 8890 适配 fork（本仓库的源码基线）
 - [LineageOS](https://lineageos.org/) —— 系统平台
 - [MindTheGapps](https://github.com/MindTheGapps) —— GApps 安装器（本项目仅提供兼容性补丁，不包含其内容）
-
+- [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) —— DeepSeek Harness（没有dsh就不会有这些东西，毕竟我水平还仅仅入门级）
 ## 免责声明
 
 本项目修改系统分区，存在变砖、数据丢失、保修失效等风险。请在充分备份后自行决定是否使用。
 作者不对任何直接或间接损失负责。**GApps 属于 Google 专有软件，本仓库不包含、也不分发。**
+内容仅供参考，内容供应者不会就任何资料不准，错漏，延误或阻碍所引起的损失承担任何形式的责任！！！！
+折腾有风险，刷机请谨慎！！！！！！！！！！

@@ -5,9 +5,13 @@
 > 完整的源码、可刷包、安装脚本与排障文档——包含从"IMS 完全不注册"到"去电/来电双向高清通话"的全部修复过程。
 
 <p align="left">
+  <a href="https://github.com/awmc233/gracerlte-volte"><img alt="GitHub" src="https://img.shields.io/badge/GitHub-awmc233%2Fgracerlte--volte-181717?logo=github"></a>
+  <a href="https://github.com/awmc233/gracerlte-volte/releases"><img alt="release" src="https://img.shields.io/github/v/release/awmc233/gracerlte-volte"></a>
   <img alt="platform" src="https://img.shields.io/badge/platform-Android%2013-3DDC84">
   <img alt="license" src="https://img.shields.io/badge/license-GPL--2.0-blue">
 </p>
+
+简体中文 · [English](README.en.md)
 
 ---
 
@@ -71,6 +75,15 @@ adb logcat -b all -d | grep -E "IMS registration ready|REGISTERED" | tail -3
 
 期望看到 `IMS registration ready: REGISTER 200 OK` 与 `REGISTRATION_STATE_REGISTERED`。
 然后拨测一通去电与来电，确认双向音频。
+
+也可以直接跑校验脚本（自动逐项检查并给结论）：
+
+```bash
+./tools/verify.sh
+# Windows:
+powershell -ExecutionPolicy Bypass -File tools\verify.ps1
+```
+
 
 ## 构建
 

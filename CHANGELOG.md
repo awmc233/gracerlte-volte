@@ -10,11 +10,24 @@
   `IllegalStateException: Signature|privileged permissions not in privapp-permissions allowlist`，
   导致 system_server 崩溃、开机循环。卡刷包内原本就是完整白名单，不受影响；本次改动让
   adb 安装与卡刷的行为一致。
+- `src/gradlew`、`tools/*.sh` 补上可执行位。此前在 Linux / macOS 上直接
+  `./gradlew`、`./tools/install-adb.sh` 会 permission denied。
+- 新增的 `tools/verify.ps1` 以 **UTF-8 with BOM** 保存：Windows PowerShell 5.1 会把无 BOM 的
+  UTF-8 当 ANSI 读，中文串里的字节被解成弯引号，导致脚本解析失败（`install-adb.ps1` 原本就带 BOM，
+  无需改动）。
+- 单元测试 `SipRegisteredIdentityTest` 的 Service-Route 断言与实现不符：实现按 RFC 3608
+  原样使用 `service-route`，测试却期望去掉 `;transport=udp`。已更新断言，97 个单测全部通过。
 
 ### 新增
 
 - 生成 TWRP 卡刷 / `adb sideload` 通用的安装包
   `gracerlte-VoLTE-v50-TWRP-sideload.zip`（作为发布资产单独分发，不纳入仓库）。
+- `tools/verify.sh`（Linux / macOS / WSL）与 `tools/verify.ps1`（Windows）：安装后逐项校验
+  APK 版本、overlay、VoLTE 属性、IMS 特性、注册日志与 IMS PDN，带退出码，方便脚本化。
+- `README.en.md`：英文版 README，中文 README 里加了语言切换。
+- `.github/workflows/build.yml`：GitHub Actions，push tag 或手动触发时跑单测、构建 APK，
+  打 tag 时自动把 APK 挂到 Release。
+- README 徽章换成指向真实仓库与 Release 的链接（GitHub / release / platform / license）。
 
 ## v1.0.0 — 2026-11-18
 

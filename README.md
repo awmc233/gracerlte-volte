@@ -128,6 +128,8 @@ cp local.properties.example local.properties   # 指向你的 SDK
 - 仅验证中国移动；其它运营商的 SDP/鉴权可能不同
 - 不支持 VoWiFi、视频通话
 - 未编译原生 AEC/降噪，免提可能有回声
+- **免提按钮无效**：界面状态会变化，但实际声音仍从听筒输出，详见
+  [`docs/speakerphone-investigation.md`](docs/speakerphone-investigation.md)
 - 音质取决于网络协商（实测可达 AMR-WB）
 
 ## 许可证与致谢

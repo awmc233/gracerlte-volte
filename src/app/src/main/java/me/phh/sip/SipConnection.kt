@@ -4,6 +4,9 @@ package me.phh.sip
 import android.net.IpSecManager
 import android.net.IpSecTransform
 import android.net.Network
+import android.os.ParcelFileDescriptor
+import android.system.Os
+import android.system.OsConstants
 import android.telephony.Rlog
 import java.io.FileDescriptor
 import java.io.InputStream
@@ -27,6 +30,71 @@ import java.nio.channels.spi.SelectorProvider
 /* wrapper around sockets + establish ipsec tunnel given ipsec helpers */
 private const val SIP_TCP_CONNECT_TIMEOUT_MS = 10_000
 private const val SIP_IPSEC_CLEANUP_TAG = "PHH SipConnection"
+
+/*
+ * SIP over TCP black-holes: when the P-CSCF/NAT state is gone but the local
+ * socket still says ESTABLISHED, writes are accepted into the kernel send
+ * queue and never delivered. The peer never answers, so a call would hang in
+ * "dialing" with no SIP response at all.
+ *
+ * - TCP_USER_TIMEOUT aborts the connection when sent data stays unacknowledged.
+ * - Aggressive keepalive probes detect a dead peer while idle, so the reader
+ *   loop sees an error and the existing reconnect logic can rebuild the flow.
+ */
+private const val SIP_TCP_KEEPALIVE_IDLE_SECONDS = 20
+private const val SIP_TCP_KEEPALIVE_INTERVAL_SECONDS = 5
+private const val SIP_TCP_KEEPALIVE_PROBES = 3
+private const val SIP_TCP_USER_TIMEOUT_MS = 8_000
+
+/* Linux socket option numbers; android.system.OsConstants does not expose them. */
+private const val LINUX_TCP_KEEPIDLE = 4
+private const val LINUX_TCP_KEEPINTVL = 5
+private const val LINUX_TCP_KEEPCNT = 6
+
+private fun applySipTcpHealthOptions(socket: Socket) {
+    try {
+        socket.tcpNoDelay = true
+        socket.keepAlive = true
+        val pfd = ParcelFileDescriptor.fromSocket(socket)
+        try {
+            val fd = pfd.fileDescriptor
+            Os.setsockoptInt(
+                fd,
+                OsConstants.IPPROTO_TCP,
+                LINUX_TCP_KEEPIDLE,
+                SIP_TCP_KEEPALIVE_IDLE_SECONDS,
+            )
+            Os.setsockoptInt(
+                fd,
+                OsConstants.IPPROTO_TCP,
+                LINUX_TCP_KEEPINTVL,
+                SIP_TCP_KEEPALIVE_INTERVAL_SECONDS,
+            )
+            Os.setsockoptInt(
+                fd,
+                OsConstants.IPPROTO_TCP,
+                LINUX_TCP_KEEPCNT,
+                SIP_TCP_KEEPALIVE_PROBES,
+            )
+            Os.setsockoptInt(
+                fd,
+                OsConstants.IPPROTO_TCP,
+                OsConstants.TCP_USER_TIMEOUT,
+                SIP_TCP_USER_TIMEOUT_MS,
+            )
+        } finally {
+            pfd.close()
+        }
+        Rlog.d(
+            SIP_IPSEC_CLEANUP_TAG,
+            "SIP TCP health options applied: keepalive idle=${SIP_TCP_KEEPALIVE_IDLE_SECONDS}s " +
+                "interval=${SIP_TCP_KEEPALIVE_INTERVAL_SECONDS}s probes=$SIP_TCP_KEEPALIVE_PROBES " +
+                "userTimeout=${SIP_TCP_USER_TIMEOUT_MS}ms",
+        )
+    } catch (t: Throwable) {
+        Rlog.w(SIP_IPSEC_CLEANUP_TAG, "Could not apply SIP TCP keepalive/user-timeout options", t)
+    }
+}
 
 private fun closeQuietly(label: String, close: () -> Unit) {
     try {
@@ -61,6 +129,7 @@ private fun createTcpSocket(
         if (localAddr != null) {
             bind(InetSocketAddress(localAddr, localPort))
         }
+        applySipTcpHealthOptions(this)
     }
 }
 

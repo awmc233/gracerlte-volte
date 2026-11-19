@@ -11,10 +11,31 @@ internal class SipCallSetupTimers(
     private val onOutgoingTimeout: (String, String) -> Unit,
     private val onIncomingTimeout: (String) -> Unit,
 ) {
+    companion object {
+        /** Timeout reason used when the INVITE got no SIP response at all. */
+        const val REASON_NO_RESPONSE = "INVITE no response"
+    }
+
     private var outgoingCallId: String? = null
     private var outgoingGeneration = 0
     private var incomingCallId: String? = null
     private var incomingGeneration = 0
+
+    /**
+     * Arms the short "no response at all" timer right after the initial INVITE
+     * has been written. A 100 Trying replaces it with the normal invite timer.
+     *
+     * If a response managed to arrive before the writer called us, a timer for
+     * this call-id is already armed; keep that one instead of downgrading it to
+     * the short no-response timeout.
+     */
+    fun onOutgoingInviteSent(callId: String) {
+        if (outgoingCallId == callId) {
+            Rlog.d(tag, "Outgoing INVITE already got a response; keeping existing setup timer: callId=$callId")
+            return
+        }
+        startOutgoing(callId, policy().noResponseTimeoutMs, REASON_NO_RESPONSE)
+    }
 
     fun onOutgoingInviteResponse(callId: String, statusCode: Int) {
         when {

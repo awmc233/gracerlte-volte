@@ -5404,6 +5404,23 @@ fun onWfcDisabled(reason: String) {
                 "callStartFailed" to "true",
             ),
         )
+
+        if (reason == SipCallSetupTimers.REASON_NO_RESPONSE) {
+            // No 100/183/4xx/5xx at all: the SIP flow is very likely black-holed
+            // (TCP ESTABLISHED with an undeliverable send queue). Do not call
+            // reconnectIms() here: it takes the 45s reconnect single-flight,
+            // which would swallow the "new IMS network is available" event that
+            // follows the network re-request. Tear the flow down and let the
+            // normal network callback path re-register instead.
+            Rlog.w(TAG, "Outgoing INVITE got no SIP response at all; recycling SIP transport")
+            myHandler.postDelayed({
+                dropImsConnection("outgoing INVITE got no SIP response")
+                scheduleImsNetworkRequestRestart(
+                    "outgoing INVITE got no SIP response",
+                    1_000L,
+                )
+            }, 500L)
+        }
     }
 
     private fun handleIncomingRingingTimeout(callId: String) {
@@ -6583,7 +6600,7 @@ fun onWfcDisabled(reason: String) {
             sendState = initialOutgoingInviteSendState,
             rtpSocket = rtpSocket,
         )
-        return writeInitialOutgoingInvite(
+        val sent = writeInitialOutgoingInvite(
             msg = msg,
             phoneNumber = phoneNumber,
             normalizedPhoneNumber = normalizedPhoneNumber,
@@ -6591,6 +6608,13 @@ fun onWfcDisabled(reason: String) {
             rtpSocket = rtpSocket,
             body = outgoingInviteBody,
         )
+        if (sent) {
+            // A half-dead TCP flow to the P-CSCF accepts the INVITE into the
+            // kernel send queue and never answers. Arm a short timer so such a
+            // call fails in seconds instead of hanging in "dialing" forever.
+            callSetupTimers.onOutgoingInviteSent(initialOutgoingInviteSendState.callId)
+        }
+        return sent
     }
 
     fun call(phoneNumber: String) {

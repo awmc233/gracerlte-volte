@@ -1,5 +1,26 @@
 # Changelog
 
+## v1.0.2 — 2026-11-19
+
+### 修复
+
+- **去电"完全没有反应"**：INVITE 发出后 8 秒内收不到任何 SIP 响应（连 `100 Trying` 都没有）
+  即判定失败，发送 CANCEL、以 408 结束通话，并回收 SIP 传输、重新请求 IMS 网络。
+  此前这种情况会一直停在"拨号中"（实测可复现：对 P-CSCF 丢包后
+  `Send-Q` 积压、`ESTABLISHED` 但永无响应）。
+  改动：`SipCallSetupTimers.onOutgoingInviteSent()`、`SipCarrierSettings.noResponseTimeoutMs`、
+  `SipHandler.handleOutgoingCallSetupTimeout()`。
+- **SIP TCP 健康检测**：给 SIP socket 设置 `TCP_USER_TIMEOUT=8s`、
+  keepalive（20s 空闲 / 5s 间隔 / 3 次探测）与 `TCP_NODELAY`，让"半死连接"
+  能在内核层被发现并触发既有重连逻辑（`SipConnection`）。
+
+### 已知问题
+
+- **免提按钮在 VoLTE 通话中不改变实际出声**（界面会亮、音量略变，但仍从听筒出声）。
+  这是三星音频 HAL 的限制：只有 `MODE_IN_CALL`（CP 通话）才会切换 `voice-*-wb`
+  mixer path，而 IMS 通话必须保持 `MODE_IN_COMMUNICATION` 才能让麦克风走 AP 通路。
+  详细调查与实验记录见 [`docs/speakerphone-investigation.md`](docs/speakerphone-investigation.md)。
+
 ## v1.0.1 — 2026-11-18
 
 ### 修复

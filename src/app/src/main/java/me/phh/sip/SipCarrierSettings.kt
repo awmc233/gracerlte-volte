@@ -212,6 +212,12 @@ data class SipCallSetupTimerPolicy(
     val inviteTimeoutMs: Long = 180_000L,
     val ringingTimeoutMs: Long = 30_000L,
     val ringbackTimeoutMs: Long = 32_000L,
+    /**
+     * How long to wait for *any* response (even 100 Trying) after the initial
+     * INVITE is written. A dead TCP flow to the P-CSCF swallows the request
+     * entirely, so without this timer the call would stay in "dialing" forever.
+     */
+    val noResponseTimeoutMs: Long = 8_000L,
 )
 
 data class SipPublicNumberNormalizationPolicy(

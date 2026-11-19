@@ -51,7 +51,7 @@ LineageOS 官方不支持这台机器的 VoLTE：ROM 里**没有任何 IMS 客�
 
 1. 刷入 ROM：`lineage-20.0-*-gracerlte.zip`
 2. （可选）刷 GApps —— 用 `tools/patch-mindthegapps.py` 修补**你自己的** MindTheGapps 包后再刷
-3. 刷 [`twrp/gracerlte-VoLTE-v50-TWRP.zip`](twrp/gracerlte-VoLTE-v50-TWRP.zip)
+3. 刷 Release 里的最新版刷机包
 4. 重启，等待 10–30 秒让 IMS 注册
 
 > 重刷 ROM 会覆盖 `/system`，之后重新刷一次第 3 步即可。

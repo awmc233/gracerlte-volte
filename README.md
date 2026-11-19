@@ -134,7 +134,7 @@ cp local.properties.example local.properties   # 指向你的 SDK
 
 ## 许可证与致谢
 
-本项目基于 **GPL-2.0** 发布（上游 PhhIms 为 GPL-2.0，衍生作品必须同协议）。
+本项目基于 **GPL-2.0** 发布
 上游来源与第三方组件声明见 [`NOTICE.md`](NOTICE.md)。
 
 特别感谢：

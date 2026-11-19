@@ -122,5 +122,3 @@ ROM 信息来源（作者 Ivan Meler）：
 3. 修改 `audio_hw.c` 让 AP 通话也调用 `voice_set_path()` 并保持 AP 采集，
    需要完整 LineageOS 构建环境
 
-相关实验记录（仓库外）：`C:\Users\CharlesYan\Downloads\gracerlte-rom-audiofix\`
-（`A-route-app/`、`B-route-hal/`，含 HAL 源码与 TWRP helper 包）

@@ -14,6 +14,12 @@
   keepalive（20s 空闲 / 5s 间隔 / 3 次探测）与 `TCP_NODELAY`，让"半死连接"
   能在内核层被发现并触发既有重连逻辑（`SipConnection`）。
 
+### 变更
+
+- APK 版本号提升到 `versionCode 51` / `versionName 1.0.2`。
+- 发布 v1.0.2 的 TWRP 卡刷 / `adb sideload` 通用包，`tools/verify.*` 改为接受
+  `versionCode >= 50`。
+
 ### 已知问题
 
 - **免提按钮在 VoLTE 通话中不改变实际出声**（界面会亮、音量略变，但仍从听筒出声）。

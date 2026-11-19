@@ -67,7 +67,7 @@ tools\install-adb.ps1
 ## 验证
 
 ```bash
-adb shell dumpsys package me.phh.ims | grep versionCode   # versionCode=50
+adb shell dumpsys package me.phh.ims | grep versionCode   # versionCode>=50
 adb shell cmd overlay list | grep me.phh.ims.overlay      # [x] me.phh.ims.overlay
 adb shell getprop persist.dbg.volte_avail_ovr             # 1
 adb logcat -b all -d | grep -E "IMS registration ready|REGISTERED" | tail -3

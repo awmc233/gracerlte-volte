@@ -1,4 +1,4 @@
-﻿# gracerlte VoLTE — 安装后验证脚本（Windows / PowerShell）
+# gracerlte VoLTE — 安装后验证脚本（Windows / PowerShell）
 #
 # 用法:
 #   .\tools\verify.ps1                 # 默认 adb、默认设备
@@ -51,12 +51,15 @@ if ($state -eq "device") {
 # 1. APK 版本
 $ver = Trim-Text ((Adb shell dumpsys package me.phh.ims 2>$null | Out-String))
 $verLine = ($ver -split "`n" | Where-Object { $_ -match 'versionCode=' } | Select-Object -First 1)
-if ($verLine -match 'versionCode=50') {
-    Ok "PhhIms 已安装，versionCode=50"
-} elseif (-not $verLine) {
-    Bad "查不到 me.phh.ims（未安装？）"
+if ($verLine -match 'versionCode=(\d+)') {
+    $code = [int]$Matches[1]
+    if ($code -ge 50) {
+        Ok "PhhIms 已安装，versionCode=$code（要求 >=50）"
+    } else {
+        Bad "版本过低: versionCode=$code（要求 >=50）"
+    }
 } else {
-    Bad "版本不符: $($verLine.Trim())（期望 50）"
+    Bad "查不到 me.phh.ims（未安装？）"
 }
 
 # 2. RRO overlay

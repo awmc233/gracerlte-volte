@@ -63,11 +63,16 @@ fi
 
 # 1. APK 版本
 ver=$(adb shell dumpsys package me.phh.ims 2>/dev/null | grep -m1 'versionCode=' | trim || true)
-case "$ver" in
-    *versionCode=50*) ok "PhhIms 已安装，versionCode=50" ;;
-    "")               bad "查不到 me.phh.ims（未安装？）" ;;
-    *)                bad "版本不符: $ver（期望 50）" ;;
-esac
+code=$(printf '%s' "$ver" | sed -n 's/.*versionCode=\([0-9][0-9]*\).*/\1/p')
+if [ -z "$ver" ]; then
+    bad "查不到 me.phh.ims（未安装？）"
+elif [ -z "$code" ]; then
+    bad "版本解析失败: $ver"
+elif [ "$code" -ge 50 ]; then
+    ok "PhhIms 已安装，versionCode=$code（要求 >=50）"
+else
+    bad "版本过低: versionCode=$code（要求 >=50）"
+fi
 
 # 2. RRO overlay
 if adb shell cmd overlay list 2>/dev/null | grep -q '\[x\].*me\.phh\.ims\.overlay'; then

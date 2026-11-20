@@ -1,5 +1,26 @@
 # Changelog
 
+## v1.0.3 — 2026-11-20
+
+### 修复
+
+- **长时间待机后电话打不通（走了 CS 回落并失败）**：IMS 的"保留注册、按需重连"路径
+  会让主 SIP TCP 流长期关闭；注册过期后没有任何机制触发重注册，框架于是把呼叫切到 CS，
+  而 LTE-only 的移动网络直接以 `CONGESTION`（cause 49）拒绝。
+  新增 SIP 看门狗（`SipHandler.ensureSipWatchdogRunning`）：每 30 秒检查一次，
+  以下任一情况立即强制完整重注册：
+  - 最近一次成功 REGISTER 超过 20 分钟
+  - IMS 已就绪但主 SIP 传输处于空闲/关闭状态
+  - IMS 已就绪但 SIP 传输断开
+
+  现场日志（2026-11-20 10:35–10:36）：`useImsForCall=false`、
+  `LAST_CALL_FAIL_CAUSE causeCode: 49 vendorCause: 24`、`onDisconnect cause=CONGESTION`；
+  应用进程存活但已无任何 SIP 线程/连接，而 IMS 网络请求仍然挂着。
+
+### 变更
+
+- 版本号 `versionCode 52` / `versionName 1.0.3`。
+
 ## v1.0.2 — 2026-11-19
 
 ### 修复

@@ -14,6 +14,9 @@ import android.telephony.ims.stub.ImsRegistrationImplBase.REGISTRATION_TECH_IWLA
 import android.telephony.ims.stub.ImsRegistrationImplBase.REGISTRATION_TECH_LTE
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import java.io.*
 import java.net.*
@@ -35,6 +38,12 @@ class SipHandler(
         // send() and receive() on the same socket object; a long blocking receive
         // can therefore stall uplink RTP sends for the whole SO_TIMEOUT window.
         private const val RTP_SOCKET_RECEIVE_TIMEOUT_MS = 20
+
+        // Registration watchdog: check every 30s; force a full IMS reconnect when
+        // the last successful REGISTER is older than 20 minutes (carrier
+        // registrations last ~30-60 min; a stale one silently drops calls to CS).
+        private const val SIP_WATCHDOG_INTERVAL_MS = 30_000L
+        private const val SIP_REGISTER_STALE_MS = 20 * 60_000L
 
         private const val INCOMING_ACCEPT_IMS_ACCESS_CHANGE_GUARD_MS = 1_200L
         private const val REGISTER_REFRESH_RETRY_RESPONSE_TIMEOUT_MS = 15_000L
@@ -454,6 +463,9 @@ class SipHandler(
         java.util.concurrent.ConcurrentHashMap<String, Boolean>()
     ) 
     private var imsReady = false
+    @Volatile
+    private var lastSuccessfulRegisterElapsedRealtimeMs = 0L
+    private var sipWatchdogJob: Job? = null
     @Volatile
     private var mmtelVoiceEnabled = true
     private fun carrierAllowsCurrentRoaming(): Boolean =
@@ -937,11 +949,79 @@ fun setRequestCallback(method: SipMethod, cb: (SipRequest) -> Int) {
     }
 
     private fun markImsReady(reason: String) {
+        lastSuccessfulRegisterElapsedRealtimeMs = SystemClock.elapsedRealtime()
+        ensureSipWatchdogRunning()
         if (imsReady) return
         Rlog.d(TAG, "IMS registration ready: $reason")
         imsReady = true
         reconnectController.markConnected()
         imsReadyCallback?.invoke()
+    }
+
+    /**
+     * Registration-refresh / transport watchdog.
+     *
+     * The "preserve registration and reopen the main TCP flow on demand" path
+     * keeps IMS registered while the main SIP transport stays closed, to save
+     * battery. In practice the P-CSCF registration can expire while nothing
+     * re-registers: the framework still reports IMS as registered for a while,
+     * then silently starts sending calls over CS, where LTE-only CMCC rejects
+     * them ("CONGESTION", cause 49). Observed 2026-11-20 after ~13h uptime.
+     *
+     * This watchdog periodically verifies that a successful REGISTER happened
+     * recently and that a usable main SIP flow exists while IMS is ready, and
+     * forces a full IMS reconnect when either is stale.
+     */
+    private fun ensureSipWatchdogRunning() {
+        if (sipWatchdogJob?.isActive == true) return
+        sipWatchdogJob = CoroutineScope(Dispatchers.IO).launch {
+            Rlog.d(TAG, "SIP watchdog started")
+            while (isActive) {
+                delay(SIP_WATCHDOG_INTERVAL_MS)
+                try {
+                    sipWatchdogTick()
+                } catch (t: Throwable) {
+                    Rlog.w(TAG, "SIP watchdog tick failed", t)
+                }
+            }
+        }
+    }
+
+    private fun sipWatchdogTick() {
+        if (reconnectController.isReconnecting()) return
+        if (hasActiveOrPendingCallForImsReconnectDeferral()) return
+
+        val now = SystemClock.elapsedRealtime()
+        if (!imsReady) {
+            Rlog.w(TAG, "SIP watchdog: IMS not ready; requesting IMS reconnect")
+            reconnectIms("SIP watchdog: IMS not ready")
+            return
+        }
+
+        val lastRegisterMs = lastSuccessfulRegisterElapsedRealtimeMs
+        if (lastRegisterMs > 0L && now - lastRegisterMs > SIP_REGISTER_STALE_MS) {
+            Rlog.w(
+                TAG,
+                "SIP watchdog: last successful REGISTER was " +
+                    "${(now - lastRegisterMs) / 1000}s ago; forcing re-registration",
+            )
+            reconnectIms("SIP watchdog: registration refresh overdue")
+            return
+        }
+
+        if (mainSipFlowAwaitingOnDemandRecovery.get()) {
+            Rlog.w(TAG, "SIP watchdog: main SIP flow idle/closed; forcing re-registration")
+            reconnectIms("SIP watchdog: idle SIP transport")
+            return
+        }
+
+        if (this::socket.isInitialized) {
+            val current = socket
+            if (current is SipConnectionTcp && !current.isConnected()) {
+                Rlog.w(TAG, "SIP watchdog: main SIP transport is down; forcing re-registration")
+                reconnectIms("SIP watchdog: main SIP transport down")
+            }
+        }
     }
 
     private fun registrationTechName(tech: Int): String =
@@ -1273,6 +1353,9 @@ fun setRequestCallback(method: SipMethod, cb: (SipRequest) -> Int) {
 
     fun shutdown(reason: String, notifyFramework: Boolean = true) {
         clearImsReconnectSingleFlight("shutdown: $reason")
+        sipWatchdogJob?.cancel()
+        sipWatchdogJob = null
+        lastSuccessfulRegisterElapsedRealtimeMs = 0L
 
         myHandler.post {
             Rlog.w(

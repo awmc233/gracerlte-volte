@@ -1,4 +1,4 @@
-﻿//SPDX-License-Identifier: GPL-2.0
+//SPDX-License-Identifier: GPL-2.0
 package me.phh.ims
 
 import android.content.Context
@@ -1384,6 +1384,7 @@ sipHandler.imsFailureCallback = {
             val matchesOutgoingCall =
                 outgoingCallActive &&
                     (cancelledCallId == null ||
+                        outgoingCallSipCallId == null ||
                         cancelledCallId == outgoingCallSipCallId ||
                         ((callStartFailed || outgoingCall) && outgoingCallSipCallId == null))
 

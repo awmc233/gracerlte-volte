@@ -53,6 +53,12 @@ internal object SipOutgoingCallConnectionLogs {
             "statusCode" to "480",
             "statusString" to "No post-answer RTP",
             "remoteNoMediaRelease" to "true",
+            // The IMS dialog was confirmed (200 OK + ACK) but the call never
+            // reached a usable media state. Mark it as a *failed* outgoing call
+            // so MmTelFeature routes it to callSessionInitiatingFailed; without
+            // this the cancellation is dropped ("No IMS call listener") and
+            // Telecom keeps the call stuck in DIALING.
+            "callStartFailed" to "true",
         )
 
     fun postAnswerRtpTimeoutFailedLog(callId: String): String =

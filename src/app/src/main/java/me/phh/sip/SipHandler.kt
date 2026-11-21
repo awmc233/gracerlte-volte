@@ -4625,7 +4625,7 @@ fun onWfcDisabled(reason: String) {
         )
     }
 
-    private fun scheduleOutgoingPostAnswerRtpTimeout(callId: String, timeoutMs: Long = 2_000L) {
+    private fun scheduleOutgoingPostAnswerRtpTimeout(callId: String, timeoutMs: Long = 6_000L) {
         thread {
             try {
                 Thread.sleep(timeoutMs)

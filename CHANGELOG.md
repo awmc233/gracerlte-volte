@@ -1,5 +1,19 @@
 # Changelog
 
+## v1.0.4 — 2026-11-21
+
+### 修复
+
+- **已接通的通话被误判为"网络拒接"后卡死在拨号中**：
+  200 OK + ACK 之后如果 2 秒内没收到下行 RTP，旧逻辑会直接 BYE 掉通话，
+  且取消回调没有带 `callStartFailed`，`PhhMmTelFeature` 匹配不到拨出监听，
+  Telecom 就一直停在 `DIALING`（现场：11:29 那通信令已接通、被 2 秒超时掐断，
+  之后 `dumpsys telecom` 一直显示 `state=DIALING`）。
+  改动：
+  - 下行 RTP 宽限从 2 秒延长到 6 秒
+  - 超时取消时补上 `callStartFailed=true`，正确走 `callSessionInitiatingFailed`
+  - `outgoingCallSipCallId` 尚未回填时也把取消事件路由到拨出监听，避免事件被丢弃
+
 ## v1.0.3 — 2026-11-20
 
 ### 修复

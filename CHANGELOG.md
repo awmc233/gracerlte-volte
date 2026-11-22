@@ -1,5 +1,19 @@
 # Changelog
 
+## v1.0.5 — 2026-11-22
+
+### 修复
+
+- **来电全部提示"已关机"**：IMS PDN 换网（net 126 → 141）后，新网络的
+  `onAvailable` 回调被 IMS 重连的单飞锁（45 秒持有）当成"重复重连"丢弃，
+  旧的 `net=126` 又没有 link properties（`if=none`），于是每 60 秒用旧网络
+  空转重连，永远注册不上；网络侧因此把来电转到"关机"提示。
+  现场日志：`Suppressing duplicate IMS reconnect: new=new IMS network available
+  old=126 new=141 ... existing=SIP watchdog: IMS not ready`，
+  之后持续 `Trying to connect ... net=126 if=none`。
+  修复：新 IMS 网络可用时，若单飞锁仍被旧网络的重连占用，允许新网络抢占
+  （`reconnectIms` 中 clear + 重新 reserve），不再把新网络事件丢弃。
+
 ## v1.0.4 — 2026-11-21
 
 ### 修复

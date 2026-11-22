@@ -1921,7 +1921,24 @@ fun onWfcDisabled(reason: String) {
 
     private fun reconnectIms(reason: String, newNetwork: Network? = null, delayMs: Long = 1000L) {
         if (!reserveImsReconnectSingleFlight(reason, delayMs)) {
-            return
+            // A reconnect for the *old* (already lost) IMS network may still hold
+            // the single-flight gate for up to 45 s. If a different network just
+            // became available, dropping this event would leave the handler
+            // retrying the stale network forever ("Trying to connect ... net=126
+            // if=none"), so let the new network preempt the stale attempt.
+            val supersedesExisting = newNetwork != null &&
+                (!this::network.isInitialized || network != newNetwork)
+            if (!supersedesExisting) {
+                return
+            }
+            Rlog.w(
+                TAG,
+                "Preempting stale IMS reconnect for new network $newNetwork: reason=$reason",
+            )
+            clearImsReconnectSingleFlight("new IMS network supersedes stale reconnect")
+            if (!reserveImsReconnectSingleFlight("$reason (new network preempt)", delayMs)) {
+                return
+            }
         }
         reconnectController.reconnectIms(reason, newNetwork, delayMs)
     }

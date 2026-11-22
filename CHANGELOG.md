@@ -1,5 +1,17 @@
 # Changelog
 
+## v1.0.6 — 2026-11-22
+
+### 修复
+
+- **冷启动后 IMS 永远不注册（来电提示已关机）**：就绪判断要求
+  `ServiceState.STATE_IN_SERVICE`，但 LTE-only 网络在 VoLTE 注册前语音状态
+  本来就是 `OUT_OF_SERVICE`，形成"等 IMS 注册 → 等语音服务 → 互等"的死锁。
+  现象：`not ready for IMS after service state callback: state=1
+  registeredPlmn=46000` 持续数分钟，只有手动切飞行模式才能恢复。
+  修复：蜂窝 PS 域已注册、且网络上报 `LteVopsSupportInfo.isVopsSupported`
+  时也视为就绪；PS 未注册或网络不支持 VoPS 时仍保持原判断。
+
 ## v1.0.5 — 2026-11-22
 
 ### 修复

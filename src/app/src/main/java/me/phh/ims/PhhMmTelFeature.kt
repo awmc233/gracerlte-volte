@@ -44,7 +44,48 @@ private fun ServiceState.phhRegisteredPlmnForIms(): String? {
 private fun ServiceState.isCellularReadyForPhhIms(
     registeredPlmn: String? = phhRegisteredPlmnForIms(),
 ): Boolean {
-    return state == ServiceState.STATE_IN_SERVICE && registeredPlmn != null
+    if (state == ServiceState.STATE_IN_SERVICE && registeredPlmn != null) {
+        return true
+    }
+
+    // LTE-only networks report the voice service as OUT_OF_SERVICE until VoLTE
+    // is registered, which cannot happen before this app decides it is "ready".
+    // Waiting for STATE_IN_SERVICE therefore deadlocks on a cold boot: data is
+    // attached, the IMS PDN is up, but voice stays out of service forever, so
+    // SIP never registers and callers hear "the phone is switched off".
+    //
+    // Accept a registered PS domain on cellular when the network advertises VoPS
+    // (VoLTE over PS) support; the SIP layer will still fail gracefully if the
+    // IMS PDN/P-CSCF never appears.
+    if (registeredPlmn == null) {
+        return false
+    }
+    val ps = try {
+        getNetworkRegistrationInfo(
+            NetworkRegistrationInfo.DOMAIN_PS,
+            AccessNetworkConstants.TRANSPORT_TYPE_WWAN,
+        )
+    } catch (_: Throwable) {
+        null
+    } ?: return false
+    if (!ps.isRegistered) {
+        return false
+    }
+
+    val vopsSupported = try {
+        val dataSpecific = ps.javaClass
+            .getMethod("getDataSpecificRegistrationInfo")
+            .invoke(ps) ?: return false
+        val vopsInfo = dataSpecific.javaClass
+            .getMethod("getLteVopsSupportInfo")
+            .invoke(dataSpecific) ?: return false
+        vopsInfo.javaClass
+            .getMethod("isVopsSupported")
+            .invoke(vopsInfo) as? Boolean
+    } catch (_: Throwable) {
+        null
+    }
+    return vopsSupported == true
 }
 
 private fun ServiceState.phhIwlanRegistrationForIms(): NetworkRegistrationInfo? {
